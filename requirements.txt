@@ -1,0 +1,12 @@
+numpy
+opencv-python
+mediapipe
+deepface
+streamlit
+tensorflow
+keras
+retina-face
+mtcnn
+moviepy
+faster-whisper
+plotly
