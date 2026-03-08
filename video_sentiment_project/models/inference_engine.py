@@ -107,6 +107,69 @@ class EmotionInferenceV4:
 
         return best_emotion, confidence, final_probs
 
+    def predict_batch(self, texts):
+        """
+        Batched prediction for multiple texts.
+        Returns a list of tuples: (best_emotion, confidence, all_probs)
+        """
+        if not texts:
+            return []
+
+        results = []
+        if self.use_transformer:
+            # For transformer, we can batch everything if memory allows, but chunking is safer.
+            # Here we just process in chunks. The predictor.py already chunks by 50, so this list is <= 50.
+            inputs = self.tokenizer(
+                texts, return_tensors="pt", truncation=True,
+                max_length=128, padding=True
+            ).to(self.device)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                logits = outputs.logits
+                probs_batch = F.softmax(logits, dim=-1).cpu().numpy()
+            
+            for i, text in enumerate(texts):
+                probs = probs_batch[i]
+                prob_dict = {EMOTION_LABELS[j]: float(probs[j]) for j in range(len(EMOTION_LABELS))}
+                final_probs = self.apply_hybrid_rules(text, prob_dict)
+                sorted_probs = sorted(final_probs.items(), key=lambda x: x[1], reverse=True)
+                best_emotion, confidence = sorted_probs[0]
+                results.append((best_emotion, confidence, final_probs))
+        else:
+            from nltk.corpus import stopwords
+            from nltk.stem import PorterStemmer
+            stemmer = PorterStemmer()
+            stop_words = set(stopwords.words('english'))
+            
+            processed_texts = []
+            for text in texts:
+                cleaned = re.sub(r'[^a-z\s]', '', text.lower())
+                tokens = cleaned.split()
+                processed = ' '.join([stemmer.stem(t) for t in tokens if t not in stop_words])
+                processed_texts.append(processed)
+
+            vecs = self.vectorizer.transform(processed_texts)
+            probs_batch = self.model.predict_proba(vecs)
+            classes = self.model.classes_
+
+            for i, text in enumerate(texts):
+                probs = probs_batch[i]
+                prob_dict = {cls: float(p) for cls, p in zip(classes, probs)}
+                for lbl in EMOTION_LABELS:
+                    if lbl not in prob_dict:
+                        prob_dict[lbl] = 0.0
+                
+                final_probs = self.apply_hybrid_rules(text, prob_dict)
+                sorted_probs = sorted(final_probs.items(), key=lambda x: x[1], reverse=True)
+                best_emotion, confidence = sorted_probs[0]
+                results.append((best_emotion, confidence, final_probs))
+                
+        return results
+        sorted_probs = sorted(final_probs.items(), key=lambda x: x[1], reverse=True)
+        best_emotion, confidence = sorted_probs[0]
+
+        return best_emotion, confidence, final_probs
+
 
 # Example Test
 if __name__ == "__main__":

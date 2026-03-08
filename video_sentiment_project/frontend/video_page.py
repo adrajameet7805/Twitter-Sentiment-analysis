@@ -32,7 +32,7 @@ def render_video_analysis(engine):
     st.markdown("### 🎥 Video Preview")
     st.video(uploaded_video)
 
-    if not st.button("🚀 Analyse Video", type="primary", use_container_width=True):
+    if not st.button("🚀 Analyse Video", type="primary", width="stretch"):
         return
 
     # ── Processing ────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ def render_video_analysis(engine):
             cols = st.columns(min(len(preview_frames), 5))
             for i, frame in enumerate(preview_frames):
                 if i < 5:
-                    cols[i].image(frame, use_container_width=True)
+                    cols[i].image(frame, use_column_width=True)
                     
         # 2. Emotion Timeline
         st.markdown("### 📊 Emotion Timeline")
@@ -70,8 +70,8 @@ def render_video_analysis(engine):
         if timeline:
             df_timeline = pd.DataFrame(timeline)
             fig_timeline = px.line(df_timeline, x="time", y="emotion", markers=True, title="Emotion Changes Over Time")
-            fig_timeline.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E5E7EB"))
-            st.plotly_chart(fig_timeline, use_container_width=True)
+            fig_timeline.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font={"color": "#E5E7EB"})
+            st.plotly_chart(fig_timeline, width="stretch")
 
         # 3. Emotion Distribution
         st.markdown("### 📈 Emotion Distribution")
@@ -79,8 +79,8 @@ def render_video_analysis(engine):
         if dist:
             df_dist = pd.DataFrame(list(dist.items()), columns=["Emotion", "Percentage"])
             fig_dist = px.bar(df_dist, x="Emotion", y="Percentage", color="Emotion", title="Emotion Frequency (%)")
-            fig_dist.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#E5E7EB"))
-            st.plotly_chart(fig_dist, use_container_width=True)
+            fig_dist.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font={"color": "#E5E7EB"})
+            st.plotly_chart(fig_dist, width="stretch")
     else:
         st.warning("No face detected in video analysis.")
 

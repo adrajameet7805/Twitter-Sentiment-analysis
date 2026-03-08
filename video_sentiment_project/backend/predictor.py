@@ -19,6 +19,11 @@ def predict_emotion_v4(texts, engine):
     if isinstance(texts, str):
         texts = [texts]
 
+    # Use the new optimized predict_batch method
+    if hasattr(engine, 'predict_batch'):
+        return engine.predict_batch(texts)
+    
+    # Fallback to loop if needed
     results = []
     for t in texts:
         results.append(engine.predict(t))
@@ -63,7 +68,7 @@ def build_results_dataframe(data_to_process, engine, progress_callback=None):
     Run batch inference and return a fully annotated results DataFrame.
     Includes a progress_callback for real-time UI updates.
     """
-    CHUNK_SIZE = 50 # Smaller chunks for smoother progress
+    CHUNK_SIZE = 100 # Increased chunk size for better tensor manipulation utilization
     total_items = len(data_to_process)
     results = []
 
@@ -72,15 +77,11 @@ def build_results_dataframe(data_to_process, engine, progress_callback=None):
         batch_predictions = predict_emotion_v4(chunk, engine)
         
         for text, (emotion, conf, probs) in zip(chunk, batch_predictions):
-            row = {
+            results.append({
                 'text': text,
                 'predicted_emotion': emotion,
                 'confidence': conf,
-            }
-            # Optional: store individual probabilities for deeper analysis
-            # for e, p in probs.items():
-            #     row[f'{e}_Prob'] = p
-            results.append(row)
+            })
         
         if progress_callback:
             progress_callback(min(1.0, (i + len(chunk)) / total_items))

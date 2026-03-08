@@ -83,7 +83,7 @@ def render_audio_analysis(engine):
     # ── Analyse Button ─────────────────────────────────────────────────────
     st.markdown("<div style='margin-top:1.25rem'></div>", unsafe_allow_html=True)
 
-    if not st.button("🚀 Analyse Audio", type="primary", use_container_width=True,
+    if not st.button("🚀 Analyse Audio", type="primary", width="stretch",
                      key="audio_analyse_btn"):
         return
 
@@ -212,7 +212,7 @@ def render_audio_analysis(engine):
         height=360,
         margin=dict(l=0, r=0, t=35, b=0),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # ── Re-analyse prompt ──────────────────────────────────────────────────
     st.markdown("""

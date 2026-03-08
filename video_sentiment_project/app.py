@@ -15,6 +15,8 @@ import plotly.express as px
 import logging
 from datetime import datetime
 import hashlib
+import json
+import os
 from functools import wraps
 
 def check_dependencies():
@@ -187,47 +189,259 @@ def hash_password(password):
     """Securely hash a password using SHA256."""
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Note: In a real app, these would be in environment variables
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD_HASH = hash_password("admin123") # SHA256 of 'admin123'
+CREDENTIALS_FILE = "admin_credentials.json"
+
+def load_credentials():
+    if os.path.exists(CREDENTIALS_FILE):
+        try:
+            with open(CREDENTIALS_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "admin": hash_password("admin123"),
+        "meet": hash_password("meet123"),
+        "dataadmin": hash_password("ai2026")
+    }
+
+def save_credentials(creds):
+    with open(CREDENTIALS_FILE, "w") as f:
+        json.dump(creds, f)
+
+ADMIN_CREDENTIALS = load_credentials()
 
 def render_login_page():
-    """Renders a clean, glassmorphism-styled login page."""
+    """Renders a clean, AI-style dark login page with multiple admin support."""
     st.markdown("""
-        <div style="text-align: center; padding: 3rem 0;">
-            <h1 class="hero-title" style="font-size: 2.5rem;">🔒 Admin Access</h1>
-            <p class="hero-subtitle">Sentiment Analysis Enterprise Edition</p>
+        <style>
+        /* Dark AI background with glowing dots */
+        [data-testid="stAppViewContainer"] {
+            background-color: #0b0f19;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 25px 25px;
+        }
+        [data-testid="stHeader"] {
+            background-color: transparent;
+        }
+        
+        /* Branding */
+        .login-title-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 3rem;
+            margin-bottom: 0.5rem;
+        }
+        .login-logo {
+            background: #1e293b;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.3);
+            color: #60A5FA;
+        }
+        .login-title {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3B82F6 0%, #A855F7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+        .login-tagline {
+            color: #9CA3AF;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            font-weight: 500;
+        }
+        
+        /* Form Card */
+        [data-testid="stForm"] {
+            background: rgba(15, 23, 42, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 20px !important;
+            padding: 2.5rem !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+
+        /* Login Card Inner */
+        .login-card-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .login-card-title {
+            color: #F8FAFC;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        .login-card-subtitle {
+            color: #94A3B8;
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
+
+        /* System Status */
+        .system-status {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .status-text {
+            color: #4ade80;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* Button */
+        [data-testid="stFormSubmitButton"] button {
+            background: linear-gradient(135deg, #A855F7 0%, #3B82F6 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 0.6rem !important;
+            font-weight: 600 !important;
+            font-size: 1.05rem !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3) !important;
+            margin-top: 0.5rem !important;
+        }
+        [data-testid="stFormSubmitButton"] button:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+            transform: translateY(-2px) !important;
+            color: white !important;
+        }
+        
+        /* Support Links */
+        .support-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+            padding: 0 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 1rem;
+        }
+        .support-links a {
+            color: #9CA3AF;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .support-links a:hover {
+            color: #60A5FA;
+        }
+        </style>
+
+        <div class="login-title-container">
+            <div class="login-logo">💬</div>
+            <h1 class="login-title">Twitter Sentiment Analysis</h1>
         </div>
+        <p class="login-tagline">Advanced AI that detects 10 distinct emotional states in text.</p>
     """, unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 1.5, 1])
+    if "show_new_admin_form" not in st.session_state:
+        st.session_state.show_new_admin_form = False
+
+    c1, c2, c3 = st.columns([1, 1.3, 1])
     with c2:
-        with st.container():
-            st.markdown("""
-                <div style="
-                    background: rgba(15, 23, 42, 0.6);
-                    border: 1px solid rgba(255,255,255,0.08);
-                    border-radius: 16px;
-                    padding: 2rem;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                ">
-            """, unsafe_allow_html=True)
-            
-            with st.form("login_form"):
-                u = st.text_input("Username", placeholder="admin")
+        if not st.session_state.show_new_admin_form:
+            with st.form("login_form", clear_on_submit=False):
+                st.markdown("""
+                    <div class="login-card-header">
+                        <h2 class="login-card-title">Admin Access</h2>
+                        <p class="login-card-subtitle">Sentiment Analysis Enterprise Edition</p>
+                    </div>
+                    <div class="system-status">
+                        <div class="status-dot"></div>
+                        <p class="status-text">System online – All services operational</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Using placeholder with icons for username and password
+                u = st.text_input("Username", placeholder="👤 Enter your username")
                 p = st.text_input("Password", type="password", placeholder="••••••••")
-                submit = st.form_submit_button("Sign In", use_container_width=True)
+                
+                submit = st.form_submit_button("🚀 Sign In", use_container_width=True)
                 
                 if submit:
-                    if u == ADMIN_USERNAME and hash_password(p) == ADMIN_PASSWORD_HASH:
+                    if u in ADMIN_CREDENTIALS and hash_password(p) == ADMIN_CREDENTIALS[u]:
                         st.session_state["authenticated"] = True
-                        st.session_state["user"] = "Admin"
+                        st.session_state["user"] = u
                         st.session_state["role"] = "admin"
                         st.rerun()
                     else:
                         st.error("Invalid credentials. Please try again.")
             
-            st.markdown("</div>", unsafe_allow_html=True)
+            # Additional button outside form
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("➕ New Admin Login", use_container_width=True):
+                st.session_state.show_new_admin_form = True
+                st.rerun()
+
+            st.markdown("""
+                <div class="support-links">
+                    <a href="#">Forgot password?</a>
+                    <a href="#">Contact Admin</a>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            with st.form("create_admin_form", clear_on_submit=True):
+                st.markdown("""
+                    <div class="login-card-header">
+                        <h2 class="login-card-title">Create New Admin</h2>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                new_u = st.text_input("New Username Field", placeholder="Enter new admin username")
+                new_p = st.text_input("New Password Field", type="password", placeholder="Enter new admin password")
+                
+                create_submit = st.form_submit_button("Create Admin", use_container_width=True)
+                
+                if create_submit:
+                    if not new_u or not new_p:
+                        st.error("Please provide both username and password.")
+                    elif new_u in ADMIN_CREDENTIALS:
+                        st.error(f"Admin '{new_u}' already exists.")
+                    else:
+                        ADMIN_CREDENTIALS[new_u] = hash_password(new_p)
+                        save_credentials(ADMIN_CREDENTIALS)
+                        st.success(f"Admin '{new_u}' created successfully. You can now log in.")
+                        # Small delay for visual success: st.rerun will immediately discard it if not careful.
+                        # Setting the state and keeping it a little longer is better, but this will do.
+                        st.session_state.show_new_admin_form = False
+                        st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("⬅️ Back to Login", use_container_width=True):
+                st.session_state.show_new_admin_form = False
+                st.rerun()
 
 # ── Authentication Handling ────────────────────────────────────────────────────
 if "authenticated" not in st.session_state:
@@ -297,7 +511,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown(f"👤 **{st.session_state.get('user', 'Guest')}** ({st.session_state.get('role', 'user')})")
     
-    if st.button("🚪 Logout", use_container_width=True):
+    if st.button("🚪 Logout", width="stretch"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
@@ -367,7 +581,7 @@ if page == "Home":
                 placeholder="e.g. I am so excited about this new feature!",
                 key="home_input"
             )
-            if st.button("Analyze Now", type="primary", use_container_width=True):
+            if st.button("Analyze Now", type="primary", width="stretch"):
                 if quick_test:
                     results = predict_emotion_v4([quick_test], engine)
                     emotion, conf, _ = results[0]
@@ -491,7 +705,7 @@ elif page == "Batch Sentiment Analysis":
                 color='Label', color_discrete_map=_colors
             )
             fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E5E7EB'))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with c2:
             avg_conf = results_df.groupby('predicted_emotion')['confidence'].mean()
@@ -503,10 +717,10 @@ elif page == "Batch Sentiment Analysis":
                 color='Emotion_Label', color_discrete_map=_colors
             )
             fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E5E7EB'))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         st.markdown("### 📋 Data Table")
-        st.dataframe(results_df[['text', 'Emotion_Display', 'confidence']], use_container_width=True)
+        st.dataframe(results_df[['text', 'Emotion_Display', 'confidence']], width="stretch")
 
         csv = results_df.to_csv(index=False)
         st.download_button("📥 Download Results (CSV)", csv, "emotion_results.csv", "text/csv")

@@ -2,26 +2,23 @@ import io
 import logging
 import librosa
 from faster_whisper import WhisperModel
+import streamlit as st
 
 # ── Singleton Whisper model (loaded only once) ─────────────────────
 _whisper_model = None
 
 
+@st.cache_resource
 def _get_model():
-    global _whisper_model
+    logging.info("Loading Whisper 'tiny.en' model for fast transcription...")
 
-    if _whisper_model is None:
-        logging.info("Loading Whisper 'tiny.en' model for fast transcription...")
-
-        _whisper_model = WhisperModel(
-            "tiny.en",
-            device="cpu",
-            compute_type="int8",
-            cpu_threads=4,
-            num_workers=1
-        )
-
-    return _whisper_model
+    return WhisperModel(
+        "tiny.en",
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=4,
+        num_workers=1
+    )
 
 
 def transcribe_audio(audio_bytes: bytes, file_ext=None):
@@ -43,19 +40,18 @@ def transcribe_audio(audio_bytes: bytes, file_ext=None):
 
         waveform, sr = librosa.load(
             audio_file,
-            sr=16000,
-            duration=15
+            sr=16000
         )
+
+        import numpy as np
 
         if waveform is None or len(waveform) == 0:
             raise ValueError("Empty audio file")
 
-        # ── Remove silence for faster processing ────────────────────
+        # ── Remove silence for faster processing (keep ALL speech segments) ──
         intervals = librosa.effects.split(waveform, top_db=25)
-
         if len(intervals) > 0:
-            start, end = intervals[0]
-            waveform = waveform[start:end]
+            waveform = np.concatenate([waveform[start:end] for start, end in intervals])
 
         # ── Load Whisper model ──────────────────────────────────────
         model = _get_model()

@@ -72,6 +72,8 @@ class FaceEmotionPredictor:
             results = self.detector.process(enhanced_rgb)
             
             out_results = []
+            batch_faces = []
+            batch_meta = []
             
             if not results.detections:
                 return []
@@ -111,18 +113,31 @@ class FaceEmotionPredictor:
                 face_normalized = face_resized / 255.0
                 face_ready = np.reshape(face_normalized, (1, 48, 48, 1))
 
-                # Predict Emotion
-                predictions = self.model.predict(face_ready, verbose=0)[0]
+                batch_faces.append(face_ready)
+                batch_meta.append({
+                    "box": (new_x, new_y, new_w, new_h),
+                    "resized_frame": frame
+                })
+
+            if not batch_faces:
+                return []
+
+            # ── Batch Predict Emotions ─────────────────────────────────────
+            batch_arr = np.vstack(batch_faces)
+            predictions_batch = self.model.predict(batch_arr, verbose=0)
+            
+            for i, predictions in enumerate(predictions_batch):
                 emotion_idx = np.argmax(predictions)
                 confidence = float(np.max(predictions))
                 predicted_emotion = self.emotion_labels.get(emotion_idx, "Unknown")
                 
+                meta = batch_meta[i]
                 out_results.append({
                     "emotion": predicted_emotion,
                     "confidence": confidence,
-                    "box": (new_x, new_y, new_w, new_h),
+                    "box": meta["box"],
                     "probabilities": predictions.tolist(),
-                    "resized_frame": frame # Return the 640px frame for drawing
+                    "resized_frame": meta["resized_frame"]
                 })
             
             return out_results

@@ -10,3 +10,8 @@ mtcnn
 moviepy
 faster-whisper
 plotly
+librosa
+scikit-learn
+nltk
+torch
+transformers
