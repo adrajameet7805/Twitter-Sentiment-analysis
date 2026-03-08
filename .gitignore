@@ -4,3 +4,5 @@ __pycache__/
 .venv/
 logs/
 *.log
+training.1600000.processed.noemoticon.csv
+*.csv
