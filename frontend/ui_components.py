@@ -160,8 +160,8 @@ def render_analytics_dashboard(df: pd.DataFrame):
                 color=[emotion_label_with_emoji(e) for e in counts.index],
                 color_discrete_map=emotion_colors
             )
-            fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E5E7EB'))
-            st.plotly_chart(fig_pie, use_container_width=True)
+            fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font={"color": '#E5E7EB'})
+            st.plotly_chart(fig_pie, width="stretch")
 
         with c2:
             fig_bar = px.bar(
@@ -172,8 +172,8 @@ def render_analytics_dashboard(df: pd.DataFrame):
                 color=[emotion_label_with_emoji(e) for e in counts.index],
                 color_discrete_map=emotion_colors
             )
-            fig_bar.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E5E7EB'))
-            st.plotly_chart(fig_bar, use_container_width=True)
+            fig_bar.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font={"color": '#E5E7EB'})
+            st.plotly_chart(fig_bar, width="stretch")
 
         # --- 3. Top Emotion Samples ---
         st.markdown("---")
@@ -228,11 +228,11 @@ def render_analytics_dashboard(df: pd.DataFrame):
         fig_radar.update_traces(fill='toself')
         fig_radar.update_layout(
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E5E7EB'),
-            polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(showticklabels=False, ticks='')),
-            margin=dict(t=20, b=40, l=40, r=40),
+            font={"color": '#E5E7EB'},
+            polar={"bgcolor": 'rgba(0,0,0,0)', "radialaxis": {"showticklabels": False, "ticks": ''}},
+            margin={"t": 20, "b": 40, "l": 40, "r": 40},
         )
-        st.plotly_chart(fig_radar, use_container_width=True)
+        st.plotly_chart(fig_radar, width="stretch")
 
     with c4:
         st.markdown("#### 📉 Confidence Histogram")
@@ -244,12 +244,12 @@ def render_analytics_dashboard(df: pd.DataFrame):
         )
         fig_hist.update_layout(
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E5E7EB'), barmode='overlay',
-            margin=dict(t=20, b=20, l=20, r=20),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            font={"color": '#E5E7EB'}, barmode='overlay',
+            margin={"t": 20, "b": 20, "l": 20, "r": 20},
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
         )
         fig_hist.update_traces(opacity=0.75)
-        st.plotly_chart(fig_hist, use_container_width=True)
+        st.plotly_chart(fig_hist, width="stretch")
 
     st.markdown("---")
 
@@ -306,7 +306,7 @@ def render_single_analysis(engine):
 
     st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
 
-    if st.button("🚀 Analyze Emotion", type="primary", use_container_width=True):
+    if st.button("🚀 Analyze Emotion", type="primary", width="stretch"):
         if input_text:
             res_col1, res_col2 = st.columns([1, 1.5])
 
@@ -357,11 +357,11 @@ def render_single_analysis(engine):
                 )
                 fig.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='#E5E7EB', family='Inter'),
-                    yaxis=dict(autorange="reversed"),
-                    xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)'),
-                    height=350, margin=dict(l=0, r=0, t=30, b=0),
+                    font={"color": '#E5E7EB', "family": 'Inter'},
+                    yaxis={"autorange": "reversed"},
+                    xaxis={"showgrid": True, "gridcolor": 'rgba(255,255,255,0.1)'},
+                    height=350, margin={"l": 0, "r": 0, "t": 30, "b": 0},
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         else:
             st.warning("⚠️ Please provide input text.")

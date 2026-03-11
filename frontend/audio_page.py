@@ -14,7 +14,10 @@ from utils.emotion_config import (
     emotion_label_with_emoji,
     emotion_color,
     emotion_style_class,
+    EMOTION_MAP,
 )
+import pandas as pd
+import plotly.express as px
 
 # Supported upload formats
 _SUPPORTED_FORMATS = ["wav", "mp3", "ogg", "flac", "m4a"]
@@ -48,6 +51,7 @@ def render_audio_analysis(engine):
             🎤 &nbsp;Upload a voice/audio clip and the AI will
             <strong>transcribe</strong> it and detect the <strong>emotional tone</strong>.<br>
             ⚡ &nbsp;Powered by <strong>faster-whisper tiny (int8)</strong> — full audio, maximum speed.<br>
+            🌐 &nbsp;<strong>Note:</strong> Transcription is optimised for English audio.<br>
             Supported formats: <code>{", ".join(_SUPPORTED_FORMATS).upper()}</code>
         </div>
     """, unsafe_allow_html=True)
@@ -83,7 +87,7 @@ def render_audio_analysis(engine):
     # ── Analyse Button ─────────────────────────────────────────────────────
     st.markdown("<div style='margin-top:1.25rem'></div>", unsafe_allow_html=True)
 
-    if not st.button("🚀 Analyse Audio", type="primary", use_container_width=True,
+    if not st.button("🚀 Analyse Audio", type="primary", width="stretch",
                      key="audio_analyse_btn"):
         return
 
@@ -180,10 +184,6 @@ def render_audio_analysis(engine):
     st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
     st.markdown("#### 📊 Probability Distribution")
 
-    import pandas as pd
-    import plotly.express as px
-    from utils.emotion_config import EMOTION_MAP
-
     sorted_probs = dict(sorted(probs.items(), key=lambda x: x[1], reverse=True))
     df_probs = pd.DataFrame({
         "Emotion":     [emotion_label_with_emoji(e) for e in sorted_probs],
@@ -212,7 +212,7 @@ def render_audio_analysis(engine):
         height=360,
         margin=dict(l=0, r=0, t=35, b=0),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # ── Re-analyse prompt ──────────────────────────────────────────────────
     st.markdown("""

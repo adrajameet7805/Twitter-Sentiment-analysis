@@ -1,4 +1,5 @@
 import io
+import os
 import logging
 import librosa
 from faster_whisper import WhisperModel
@@ -6,22 +7,26 @@ from faster_whisper import WhisperModel
 # ── Singleton Whisper model (loaded only once) ─────────────────────
 _whisper_model = None
 
+_model_cache = None
 
 def _get_model():
-    global _whisper_model
-
-    if _whisper_model is None:
-        logging.info("Loading Whisper 'tiny.en' model for fast transcription...")
-
-        _whisper_model = WhisperModel(
-            "tiny.en",
-            device="cpu",
-            compute_type="int8",
-            cpu_threads=4,
-            num_workers=1
-        )
-
-    return _whisper_model
+    """Load and cache the Faster-Whisper model using a module-level singleton."""
+    global _model_cache
+    if _model_cache is None:
+        try:
+            # "tiny.en" is extremely fast and sufficient for basic English sentiment.
+            _model_cache = WhisperModel(
+                "tiny.en",
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=4,
+                num_workers=1
+            )
+            logging.info("WhisperModel loaded successfully.")
+        except Exception as e:
+            logging.error(f"Error loading WhisperModel: {e}")
+            raise
+    return _model_cache
 
 
 def transcribe_audio(audio_bytes: bytes, file_ext=None):
@@ -43,19 +48,13 @@ def transcribe_audio(audio_bytes: bytes, file_ext=None):
 
         waveform, sr = librosa.load(
             audio_file,
-            sr=16000,
-            duration=15
+            sr=16000
         )
+
+        import numpy as np
 
         if waveform is None or len(waveform) == 0:
             raise ValueError("Empty audio file")
-
-        # ── Remove silence for faster processing ────────────────────
-        intervals = librosa.effects.split(waveform, top_db=25)
-
-        if len(intervals) > 0:
-            start, end = intervals[0]
-            waveform = waveform[start:end]
 
         # ── Load Whisper model ──────────────────────────────────────
         model = _get_model()

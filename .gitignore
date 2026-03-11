@@ -6,3 +6,14 @@ logs/
 *.log
 training.1600000.processed.noemoticon.csv
 *.csv
+
+# ── Secrets & sensitive data ───────────────────────────────────────────────────
+.env
+admins.json
+
+# ── Database ───────────────────────────────────────────────────────────────────
+data/users.db
+
+# ── Large binary model files (tracked via Git LFS or excluded) ─────────────────
+*.pkl
+models/*.pkl

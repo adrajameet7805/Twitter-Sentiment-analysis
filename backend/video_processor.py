@@ -9,14 +9,10 @@ from collections import Counter
 try:
     from deepface import DeepFace
 except ImportError:
-    import subprocess
-    import sys
-    try:
-        print("DEBUG: DeepFace missing. Attempting automatic installation...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "deepface"])
-        from deepface import DeepFace
-    except Exception:
-        raise RuntimeError("DeepFace dependency missing. Please run: pip install deepface")
+    raise ImportError(
+        "DeepFace is not installed. Run: pip install deepface\n"
+        "Or install all dependencies: pip install -r requirements.txt"
+    )
 
 # Removed: from backend.audio_processor import transcribe_audio, extract_audio_ffmpeg
 # Removed: from backend.predictor import predict_emotion_v4
@@ -66,7 +62,7 @@ def process_video(uploaded_file, engine) -> dict:
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         
         # Sample at 6 FPS
-        frame_interval = max(1, int(fps / 3))
+        frame_interval = max(1, int(fps / 6))
         
         emotion_results = []
         timeline = []
@@ -75,57 +71,104 @@ def process_video(uploaded_file, engine) -> dict:
         f_idx = 0
         analyzed_count = 0
 
+        from deepface.modules import modeling
+        emotion_client = modeling.build_model('facial_attribute', 'Emotion')
+        emotion_model = emotion_client.model if hasattr(emotion_client, 'model') else emotion_client
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        emotion_labels = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+        
+        batch_faces = []
+        batch_meta = [] # Store (timestamp, orig_frame, (x, y, w, h))
+
+        def process_batch(faces, meta):
+            if not faces: return
+            
+            batch_arr = np.array(faces)
+            preds = emotion_model.predict(batch_arr, verbose=0)
+            
+            frame_emotions_map = {}
+            frame_image_map = {}
+            
+            for i, pred in enumerate(preds):
+                emotion_idx = np.argmax(pred)
+                emotion = emotion_labels[emotion_idx]
+                conf = pred[emotion_idx]
+                
+                timestamp, draw_frame, (x, y, w, h) = meta[i]
+                
+                if timestamp not in frame_emotions_map:
+                    frame_emotions_map[timestamp] = []
+                    frame_image_map[timestamp] = draw_frame
+                
+                frame_emotions_map[timestamp].append(emotion)
+                
+                cv2.rectangle(draw_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                label = f"{emotion.capitalize()} ({conf:.0%})"
+                cv2.putText(draw_frame, label, (x, max(y-10, 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+            for ts, ems in frame_emotions_map.items():
+                dom_emotion = Counter(ems).most_common(1)[0][0]
+                emotion_results.append(dom_emotion)
+                timeline.append({"time": ts, "emotion": dom_emotion})
+                
+                if len(preview_frames) < 10:
+                    try:
+                        rgb_frame = cv2.cvtColor(frame_image_map[ts], cv2.COLOR_BGR2RGB)
+                        preview_frames.append(rgb_frame)
+                    except:
+                        pass
+        
+            return len(preds)
+
         while True:
-            success, frame = cap.read()
+            success = cap.grab()
             if not success or analyzed_count >= 500:
                 break
                 
             if f_idx % frame_interval == 0:
+                ret, frame = cap.retrieve()
+                if not ret:
+                    break
+
                 timestamp = f"{f_idx / fps:.2f}s"
                 try:
-                    # DeepFace Analysis
-                    objs = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-                    if not isinstance(objs, list): objs = [objs]
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
                     
-                    frame_emotions = []
-                    draw_frame = frame.copy()
-                    face_in_frame = False
-
-                    for obj in objs:
-                        region = obj.get("region", {})
-                        if not region or region.get("w", 0) == 0: continue
-                        
-                        face_in_frame = True
-                        x, y, w, h = region["x"], region["y"], region["w"], region["h"]
-                        emotion = obj.get("dominant_emotion", "Unknown")
-                        conf = obj.get("emotion", {}).get(emotion, 0) / 100.0
-                        
-                        frame_emotions.append(emotion)
-                        total_faces += 1
-
-                        # Bounding Box and Label
-                        cv2.rectangle(draw_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                        label = f"{emotion.capitalize()} ({conf:.0%})"
-                        cv2.putText(draw_frame, label, (x, max(y-10, 20)), 
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-
-                    if face_in_frame:
-                        dom_emotion = Counter(frame_emotions).most_common(1)[0][0]
-                        emotion_results.append(dom_emotion)
-                        timeline.append({"time": timestamp, "emotion": dom_emotion})
-                        
-                        if len(preview_frames) < 10:
-                            rgb_frame = cv2.cvtColor(draw_frame, cv2.COLOR_BGR2RGB)
-                            preview_frames.append(rgb_frame)
-                    else:
+                    if len(faces) == 0:
                         timeline.append({"time": timestamp, "emotion": "No Face"})
+                    else:
+                        draw_frame = frame.copy()
+                        for (x, y, w, h) in faces:
+                            face_roi = gray[y:y+h, x:x+w]
+                            face_resized = cv2.resize(face_roi, (48, 48))
+                            face_normalized = face_resized / 255.0
+                            face_expanded = np.expand_dims(face_normalized, axis=-1)
+                            
+                            batch_faces.append(face_expanded)
+                            batch_meta.append((timestamp, draw_frame, (x, y, w, h)))
+                    
+                    if len(batch_faces) >= 32:
+                        processed_faces_in_batch = process_batch(batch_faces, batch_meta)
+                        if processed_faces_in_batch:
+                            total_faces += processed_faces_in_batch
+                        batch_faces = []
+                        batch_meta = []
 
                     analyzed_count += 1
                 except Exception as e:
-                    logging.error(f"DeepFace error at {timestamp}: {e}")
+                    logging.error(f"Error at {timestamp}: {e}")
 
             f_idx += 1
 
+        processed_faces_in_batch = process_batch(batch_faces, batch_meta)
+        if processed_faces_in_batch:
+            total_faces += processed_faces_in_batch
+        batch_faces = []
+        batch_meta = []
+        
+        timeline.sort(key=lambda x: float(str(x['time']).replace('s', '')))
+        
         cap.release()
 
         # ── 3. Aggregation ────────────────────────────────────────────────────
