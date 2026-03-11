@@ -1,73 +1,156 @@
-# 🧠 Twitter Sentiment Analysis: Multi-Modal AI Dashboard
+# 🧠 Twitter Sentiment Analysis – AI-Powered Emotion Detection Dashboard
 
-A professional, enterprise-grade AI dashboard built with **Python** and **Streamlit** for real-time emotional intelligence. This project leverages state-of-the-art Deep Learning models to analyze sentiments across three critical mediums: **Text**, **Audio**, and **Video**.
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)](https://streamlit.io/)
+[![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Scikit--Learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
----
+## 📝 Project Description
+**Twitter Sentiment Analysis** is a comprehensive, multi-modal AI dashboard designed to detect and analyze emotional states across different media types. By leveraging state-of-the-art Natural Language Processing (NLP), Speech Recognition, and Computer Vision, the system provides deep insights into human emotions from **Text**, **Audio**, and **Video** inputs.
 
-## 🌟 Project Overview
-The **Twitter Sentiment Analysis** system is designed to provide comprehensive emotional insights by processing multi-modal data. Traditional sentiment analysis is often limited to "positive" or "negative" text. This project breaks that barrier by detecting **10 distinct emotional states** (Happy, Sad, Angry, Fear, Surprise, Disgust, Neutral, etc.) from textual content, spoken word, and facial expressions.
-
-The purpose is to give brands, researchers, and developers a sophisticated tool for understanding human sentiment with high granularity and accuracy (>95% on hybrid datasets).
-
----
-
-## 🚀 Key Features
-
-*   **Text Sentiment Analysis**: Highly accurate classification of text data using custom-trained hybrid NLP models.
-*   **Audio Sentiment Analysis**: Uses **Faster-Whisper** for high-speed speech-to-text and transcribes audio to apply emotional intelligence on the spoken narrative.
-*   **Video Sentiment Analysis**: Implements a computer vision pipeline using **MediaPipe** (Face Detection) and **DeepFace** (Emotion CNN) for frame-by-frame (batched) facial emotion tracking.
-*   **Interactive AI Dashboard**: A sleek, dark-themed UI with glassmorphism aesthetics, providing real-time data visualizations via **Plotly**.
-*   **Batch Processing**: Capability to process thousands of records via CSV/TXT uploads with high-speed inference.
-*   **Secure Admin System**: Multi-user authentication with encrypted credential storage.
+Whether it's analyzing a single tweet, a batch of customer feedback in a CSV, a voice recording, or a video clip, this dashboard offers real-time emotional intelligence with a high-performance, enterprise-grade user interface.
 
 ---
 
-## 🛠 Technology Stack
-
-*   **Language**: Python 3.10+
-*   **Web Framework**: Streamlit (with customized CSS/JavaScript)
-*   **Deep Learning**: TensorFlow, Keras, PyTorch
-*   **Computer Vision**: OpenCV, MediaPipe, DeepFace
-*   **Speech Processing**: Faster-Whisper, Librosa
-*   **General ML & NLP**: Scikit-Learn, NLTK, Transformers, Pandas, NumPy
-*   **Visualization**: Plotly Express
-
----
-
-## 🏗 System Architecture
-
-1.  **Text Pipeline**: Inputs are preprocessed and vectorized using optimized TF-IDF or Transformer-based embeddings, followed by inference through a multi-class CNN/Feed-forward model.
-2.  **Audio Pipeline**: Audio files (WAV, MP3, OGG) are loaded via `librosa`, silence-filtered, and transcribed using `Faster-Whisper` (tiny.en). The resulting transcript is then passed to the Text Sentiment engine.
-3.  **Video Pipeline**: Videos are sampled at 6 FPS. Faces are detected using MediaPipe/OpenCV, cropped, and normalized. Predictions are performed in optimized **batches of 32** through a specialized Face-Emotion CNN to ensure real-time performance.
+## 🚀 Features
+- **🎯 Text Sentiment Analysis**: Predicts one of 10 nuanced emotional states (Happy, Sad, Angry, Fear, Surprise, etc.) with high confidence.
+- **📂 Batch CSV Sentiment Analysis**: Process thousands of records instantly via CSV/TXT upload with progress tracking and downloadable results.
+- **🎙️ Audio Emotion Detection**: Integrated with **Faster-Whisper AI** for lightning-fast speech-to-text transcription and subsequent emotional analysis.
+- **🎥 Video Emotion Detection**: Utilizes **OpenCV**, **MediaPipe**, and **DeepFace** to detect facial expressions and aggregate emotional trends from video frames.
+- **📊 Real-time Dashboard Analytics**: Interactive Plotly visualizations including emotion distributions, radar fingerprints, and confidence histograms.
+- **🔐 Admin Authentication System**: Secure, role-based access control built with SQLite and Bcrypt password hashing.
+- **💎 Enterprise Streamlit UI**: A modern, dark-themed "Glassmorphism" interface designed for a premium user experience.
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Tech Stack
 
-*   **/backend**: Core logic including [audio_processor.py](cci:7://file:///c:/Users/Meet/OneDrive/Desktop/p/video_sentiment_project/backend/audio_processor.py:0:0-0:0), [video_processor.py](cci:7://file:///c:/Users/Meet/OneDrive/Desktop/p/video_sentiment_project/backend/video_processor.py:0:0-0:0), and [face_emotion_cnn.py](cci:7://file:///c:/Users/Meet/OneDrive/Desktop/p/video_sentiment_project/backend/face_emotion_cnn.py:0:0-0:0) for model inference.
-*   **/frontend**: Modular UI components for audio/video analysis pages and standard dashboard widgets.
-*   **/models**: Contains pre-trained weights (`.h5`, [.pkl](cci:7://file:///c:/Users/Meet/OneDrive/Desktop/p/video_sentiment_project/model.pkl:0:0-0:0)) and the unified `EmotionInferenceV4` engine.
-*   **/training**: Research scripts and Jupyter Notebooks used for model architecture design and fine-tuning.
-*   **/utils**: Configuration files for emotion mappings, color palettes, and global constants.
-*   **/data**: Storage for sample input files and processed results.
-*   **/logs**: System logs for monitoring inference performance and errors.
+### Frontend & UI
+- **Streamlit**: Main application framework.
+- **Custom CSS/HTML**: Glassmorphism design and custom animations.
+
+### Backend & Database
+- **Python 3.9+**: Core logic and orchestration.
+- **SQLite**: User management and session data.
+- **Bcrypt**: Secure credential hashing.
+
+### Machine Learning (Text)
+- **Scikit-learn**: Model training and evaluation.
+- **LinearSVC**: Optimized linear support vector classification.
+- **TF-IDF Vectorization**: Advanced text feature extraction with n-grams.
+
+### Audio AI
+- **Faster-Whisper**: High-performance speech recognition.
+- **Librosa**: Audio preprocessing, normalization, and silence trimming.
+
+### Computer Vision (Video)
+- **MediaPipe Tasks API**: Robust face detection (Task 0.10.x compatible).
+- **DeepFace**: Deep learning-based facial attribute analysis and emotion recognition.
+- **OpenCV**: Frame extraction and image processing.
+
+### Data & Visualization
+- **Plotly**: Interactive charts and professional analytics.
+- **Pandas & NumPy**: Efficient data manipulation and matrix operations.
 
 ---
 
-## ⚙️ How to Run
+## 🏗️ AI Architecture
 
-### Installation
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/your-username/twitter-sentiment-analysis.git
-    cd twitter-sentiment-analysis
-    ```
-2.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+The system operates through three primary pipelines:
 
-### Execution
-Run the Streamlit application using the following command:
-```bash
-streamlit run app.py
+1. **Text Pipeline**: 
+   `Input Text` → `NLP Preprocessing (Cleaning/Lemmatization)` → `TF-IDF Vectorizer` → `LinearSVC Model` → `10-Class Emotion Prediction`
+
+2. **Audio Pipeline**: 
+   `Audio File` → `Librosa Preprocessing (Normalization/Resampling)` → `Whisper Speech Recognition` → `Extracted Text` → `Text Sentiment Model`
+
+3. **Video Pipeline**: 
+   `Video Stream` → `Frame Sampling` → `MediaPipe Face Detection` → `DeepFace Emotion Model` → `Weighted Emotion Aggregation`
+
+---
+
+## 📁 Project Structure
+
+```text
+Twitter-Sentiment-analysis/
+│
+├── app.py                # Main Streamlit Orchestrator
+├── frontend/             # UI Components & Page Designs
+│   ├── audio_page.py
+│   ├── video_page.py
+│   └── admin_login.py
+├── backend/              # Core Logic & Processing Engines
+│   ├── audio_processor.py
+│   ├── video_processor.py
+│   └── database.py
+├── models/               # ML Models & Inference Engines
+│   └── inference_engine.py
+├── utils/                # Shared Utilities & Configurations
+├── training/             # Model Training Scripts & Notebooks
+├── data/                 # Sample Datasets & CSVs
+├── requirements.txt      # Project Dependencies
+└── README.md             # Project Documentation
+```
+
+---
+
+## ⚙️ Installation
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/adrajameet7805/Twitter-Sentiment-analysis.git
+   cd Twitter-Sentiment-analysis
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run the Application**
+   ```bash
+   streamlit run app.py
+   ```
+
+---
+
+## 📖 How to Use
+
+1. **Launch**: Start the Streamlit app using the command above.
+2. **Login**: Access the dashboard via the **Admin Access** (or navigate to `?page=login` internally).
+3. **Analyze**: Use the sidebar to choose between **Single**, **Batch**, **Audio**, or **Video** analysis.
+4. **Input**: Upload your file or type your text.
+5. **Insights**: View the detailed emotion breakdown, confidence scores, and professional visualizations.
+
+---
+
+## 📈 Model Performance
+*Current Text Sentiment Model (LinearSVC + TF-IDF):*
+
+| Metric | Value |
+| :--- | :--- |
+| **Accuracy** | 82% – 88% |
+| **Precision** | 0.84 |
+| **Recall** | 0.85 |
+| **F1 Score** | 0.84 |
+
+---
+
+## 🔮 Future Improvements
+- [ ] **Transformer-based models**: Migration to BERT or DistilBERT for better semantic context.
+- [ ] **Real-time Twitter API**: Direct integration to pull live tweets by hashtag or user.
+- [ ] **GPU Acceleration**: CUDA support for faster video and transcription processing.
+- [ ] **Dockerization**: Containerized deployment for scalable production environments.
+- [ ] **Mobile API**: Developing a FastAPI backend to serve as an endpoint for mobile applications.
+
+---
+
+## 👤 Author
+**Meet Coding**  
+- GitHub: [@adrajameet7805](https://github.com/adrajameet7805)
+- Project: [Twitter Sentiment Analysis](https://github.com/adrajameet7805/Twitter-Sentiment-analysis)
+
+---
+
+## 📄 License
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.

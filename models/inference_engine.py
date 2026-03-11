@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import re
-from nltk.corpus import stopwords
 
 # ==================================================================================
 # CONFIGURATION
@@ -13,8 +12,8 @@ from nltk.corpus import stopwords
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 MODEL_PATH     = os.path.join(_ROOT, "results_v4_distilbert")
-MODEL_FILE_LIGHT = os.path.join(_ROOT, "models", "model_v4_light.pkl")
-VEC_FILE_LIGHT   = os.path.join(_ROOT, "models", "vectorizer_v4_light.pkl")
+MODEL_FILE_LIGHT = os.path.join(_ROOT, "models", "model_v5_light.pkl")
+VEC_FILE_LIGHT   = os.path.join(_ROOT, "models", "vectorizer_v5_light.pkl")
 
 EMOTION_LABELS = [
     "Happy / Joy", "Sad", "Angry", "Fear", "Disgust",
@@ -34,7 +33,6 @@ class EmotionInferenceV4:
     def __init__(self, model_path=MODEL_PATH):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.use_transformer = False
-        self.stop_words = stopwords.words('english')
 
         # 1. Try Loading Transformer Model
         if os.path.exists(model_path) and os.path.exists(os.path.join(model_path, "pytorch_model.bin")):
@@ -43,10 +41,10 @@ class EmotionInferenceV4:
             self.model = AutoModelForSequenceClassification.from_pretrained(model_path).to(self.device)
             self.model.eval()
             self.use_transformer = True
-        # 2. Try Loading Lightweight ML Model
+        # 2. Try Loading Lightweight ML Model (V5 Optimized)
         elif os.path.exists(MODEL_FILE_LIGHT):
             import pickle
-            print("Loading Lightweight LinearSVC model...")
+            print("Loading Lightweight LinearSVC V5 model...")
             self.model = pickle.load(open(MODEL_FILE_LIGHT, 'rb'))
             self.vectorizer = pickle.load(open(VEC_FILE_LIGHT, 'rb'))
         else:
@@ -107,7 +105,7 @@ class EmotionInferenceV4:
 
     def predict_batch(self, texts):
         """
-        Batched prediction for multiple texts.
+        Batched prediction for multiple texts using optimized spaCy .pipe mapping
         Returns a list of tuples: (best_emotion, confidence, all_probs)
         """
         if not texts:
@@ -115,8 +113,7 @@ class EmotionInferenceV4:
 
         results = []
         if self.use_transformer:
-            # For transformer, we can batch everything if memory allows, but chunking is safer.
-            # Here we just process in chunks. The predictor.py already chunks by 50, so this list is <= 50.
+            # For transformer, chunking logic
             inputs = self.tokenizer(
                 texts, return_tensors="pt", truncation=True,
                 max_length=128, padding=True
@@ -134,8 +131,10 @@ class EmotionInferenceV4:
                 best_emotion, confidence = sorted_probs[0]
                 results.append((best_emotion, confidence, final_probs))
         else:
-            from utils.preprocessor import preprocess_text
-            processed_texts = [preprocess_text(text) for text in texts]
+            from utils.preprocessor import preprocess_texts
+            
+            # Super-fast batch spaCy preprocessing
+            processed_texts = preprocess_texts(texts)
 
             vecs = self.vectorizer.transform(processed_texts)
             probs_batch = self.model.predict_proba(vecs)
@@ -169,3 +168,4 @@ if __name__ == "__main__":
     for ex in examples:
         emo, conf, _ = engine.predict(ex)
         print(f"Text: {ex}\nPred: {emo} ({conf:.1%})\n")
+

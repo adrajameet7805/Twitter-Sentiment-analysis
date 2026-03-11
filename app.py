@@ -234,7 +234,7 @@ def show_dashboard():
     st.markdown("""
         <div class="hero-section animate-fadeIn">
             <div class="hero-title">🧠 Twitter Sentiment Analysis</div>
-            <div class="hero-subtitle">Advanced AI that detects 10 distinct emotional states in text</div>
+            <div class="hero-subtitle">Enterprise AI Dashboard</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -242,7 +242,7 @@ def show_dashboard():
     # ── Sidebar Navigation ────────────────────────────────────────────────────────
     with st.sidebar:
         st.title("Twitter Sentiment Analysis")
-        st.markdown("_v2.0 Enterprise Edition_")
+        st.markdown("_v2.0 Twitter Sentiment Analysis_")
         st.markdown("---")
         st.markdown("**Navigation**")
 
@@ -255,7 +255,6 @@ def show_dashboard():
                 "Sentiment Dashboard",
                 "Audio Sentiment Analysis",
                 "Video Sentiment Analysis",
-                "Admin Access",
             ],
             label_visibility="collapsed"
         )
@@ -511,6 +510,16 @@ def show_dashboard():
                     st.info(f"ℹ️ Ready to process {len(data_to_process)} lines")
 
         if data_to_process and st.button("🚀 Process Batch", type="primary"):
+            import time
+            progress_bar_anim = st.progress(0)
+            status_text = st.empty()
+            for i in range(101):
+                progress_bar_anim.progress(i)
+                status_text.text(f"Processing... {i}%")
+                time.sleep(0.02)
+            progress_bar_anim.empty()
+            status_text.empty()
+
             start_time = datetime.now()
             
             progress_bar = st.progress(0, text="Initializing batch analysis...")

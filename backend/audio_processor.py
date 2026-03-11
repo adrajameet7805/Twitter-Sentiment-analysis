@@ -3,6 +3,7 @@ import os
 import logging
 import librosa
 from faster_whisper import WhisperModel
+import re
 
 # ── Singleton Whisper model (loaded only once) ─────────────────────
 _whisper_model = None
@@ -28,11 +29,16 @@ def _get_model():
             raise
     return _model_cache
 
+def clean_transcription(text: str) -> str:
+    """Simple text cleaning before sentiment analysis."""
+    text = re.sub(r'[\r\n]+', ' ', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
 
 def transcribe_audio(audio_bytes: bytes, file_ext=None):
     """
     Fast audio transcription using faster-whisper.
-    Works without FFmpeg.
+    Works without FFmpeg if librosa uses alternatives, and cleans signal.
     """
 
     result = {
@@ -42,19 +48,29 @@ def transcribe_audio(audio_bytes: bytes, file_ext=None):
     }
 
     try:
-
         # ── Convert uploaded bytes → waveform ───────────────────────
         audio_file = io.BytesIO(audio_bytes)
 
+        # 1. Load with native sample rate first
         waveform, sr = librosa.load(
             audio_file,
-            sr=16000
+            sr=None
         )
 
         import numpy as np
 
         if waveform is None or len(waveform) == 0:
             raise ValueError("Empty audio file")
+
+        # 2. Trim silence segments to reduce processing time
+        waveform, _ = librosa.effects.trim(waveform)
+        
+        # 3. Normalize amplitude to reduce background noise discrepancies
+        waveform = librosa.util.normalize(waveform)
+        
+        # 4. Resample to 16000Hz for Whisper
+        if sr != 16000:
+            waveform = librosa.resample(waveform, orig_sr=sr, target_sr=16000)
 
         # ── Load Whisper model ──────────────────────────────────────
         model = _get_model()
@@ -76,7 +92,10 @@ def transcribe_audio(audio_bytes: bytes, file_ext=None):
             if text:
                 lines.append(text)
 
-        transcription = "\n".join(lines)
+        transcription = " ".join(lines)
+        
+        # Clean the final text
+        transcription = clean_transcription(transcription)
 
         if not transcription:
             result["transcription"] = "Audio could not be transcribed"

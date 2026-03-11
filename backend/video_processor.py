@@ -4,6 +4,7 @@ import os
 import tempfile
 import time
 import logging
+import gc
 from collections import Counter
 
 try:
@@ -14,8 +15,10 @@ except ImportError:
         "Or install all dependencies: pip install -r requirements.txt"
     )
 
-# Removed: from backend.audio_processor import transcribe_audio, extract_audio_ffmpeg
-# Removed: from backend.predictor import predict_emotion_v4
+import mediapipe as mp
+import urllib.request
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
 # Canonical mapping to keep UI consistent
 EMOTION_LABEL_MAP = {
@@ -31,9 +34,7 @@ EMOTION_LABEL_MAP = {
 def process_video(uploaded_file, engine) -> dict:
     """
     Video sentiment analysis pipeline (Face-Only):
-    1. Face emotion detection at 6 FPS
-    2. Draw bounding boxes with emotion labels
-    3. Generate timeline and distribution
+    Optimized with MediaPipe, 2 FPS sampling, weighted tracking, and GC.
     """
     start_time = time.time()
     result = {
@@ -61,10 +62,9 @@ def process_video(uploaded_file, engine) -> dict:
         cap = cv2.VideoCapture(video_tmp)
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         
-        # Sample at 6 FPS
-        frame_interval = max(1, int(fps / 6))
+        # Sample at 2 FPS to reduce computation load significantly length
+        frame_interval = max(1, int(fps / 2))
         
-        emotion_results = []
         timeline = []
         preview_frames = []
         total_faces = 0
@@ -74,9 +74,20 @@ def process_video(uploaded_file, engine) -> dict:
         from deepface.modules import modeling
         emotion_client = modeling.build_model('facial_attribute', 'Emotion')
         emotion_model = emotion_client.model if hasattr(emotion_client, 'model') else emotion_client
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        emotion_labels = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
         
+        emotion_labels = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+        emotion_scores = {label: 0.0 for label in emotion_labels}
+        
+        model_path = os.path.join(os.path.dirname(__file__), 'blaze_face_short_range.tflite')
+        if not os.path.exists(model_path):
+            logging.info("Downloading MediaPipe Face Detection model...")
+            url = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+            urllib.request.urlretrieve(url, model_path)
+            
+        base_options = python.BaseOptions(model_asset_path=model_path)
+        options = vision.FaceDetectorOptions(base_options=base_options, min_detection_confidence=0.5)
+        face_detection = vision.FaceDetector.create_from_options(options)
+
         batch_faces = []
         batch_meta = [] # Store (timestamp, orig_frame, (x, y, w, h))
 
@@ -92,7 +103,10 @@ def process_video(uploaded_file, engine) -> dict:
             for i, pred in enumerate(preds):
                 emotion_idx = np.argmax(pred)
                 emotion = emotion_labels[emotion_idx]
-                conf = pred[emotion_idx]
+                conf = float(pred[emotion_idx])
+                
+                # Weighted averaging instead of strict counting
+                emotion_scores[emotion] += conf
                 
                 timestamp, draw_frame, (x, y, w, h) = meta[i]
                 
@@ -108,10 +122,9 @@ def process_video(uploaded_file, engine) -> dict:
 
             for ts, ems in frame_emotions_map.items():
                 dom_emotion = Counter(ems).most_common(1)[0][0]
-                emotion_results.append(dom_emotion)
                 timeline.append({"time": ts, "emotion": dom_emotion})
                 
-                if len(preview_frames) < 10:
+                if len(preview_frames) < 20: # hard limit UI payload
                     try:
                         rgb_frame = cv2.cvtColor(frame_image_map[ts], cv2.COLOR_BGR2RGB)
                         preview_frames.append(rgb_frame)
@@ -131,22 +144,49 @@ def process_video(uploaded_file, engine) -> dict:
                     break
 
                 timestamp = f"{f_idx / fps:.2f}s"
+                draw_frame = None
+                rgb_frame = None
+                
                 try:
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+                    results = face_detection.detect(mp_image)
                     
-                    if len(faces) == 0:
+                    if not results.detections:
                         timeline.append({"time": timestamp, "emotion": "No Face"})
                     else:
                         draw_frame = frame.copy()
-                        for (x, y, w, h) in faces:
-                            face_roi = gray[y:y+h, x:x+w]
-                            face_resized = cv2.resize(face_roi, (48, 48))
+                        ih, iw, _ = frame.shape
+                        for detection in results.detections:
+                            bbox = detection.bounding_box
+                            
+                            x = int(bbox.origin_x)
+                            y = int(bbox.origin_y)
+                            w = int(bbox.width)
+                            h = int(bbox.height)
+                            
+                            # Skip frames where faces are too small
+                            if w < 30 or h < 30:
+                                continue
+                                
+                            x = max(0, x)
+                            y = max(0, y)
+                            w = min(iw - x, w)
+                            h = min(ih - y, h)
+                            
+                            if w == 0 or h == 0:
+                                continue
+
+                            face_roi = rgb_frame[y:y+h, x:x+w]
+                            face_gray = cv2.cvtColor(face_roi, cv2.COLOR_RGB2GRAY)
+                            face_resized = cv2.resize(face_gray, (48, 48))
                             face_normalized = face_resized / 255.0
                             face_expanded = np.expand_dims(face_normalized, axis=-1)
                             
                             batch_faces.append(face_expanded)
                             batch_meta.append((timestamp, draw_frame, (x, y, w, h)))
+                            
+                            del face_roi, face_gray, face_resized, face_normalized, face_expanded
                     
                     if len(batch_faces) >= 32:
                         processed_faces_in_batch = process_batch(batch_faces, batch_meta)
@@ -156,8 +196,17 @@ def process_video(uploaded_file, engine) -> dict:
                         batch_meta = []
 
                     analyzed_count += 1
+                    
+                    # Prevent memory spiralling
+                    if analyzed_count % 30 == 0:
+                        gc.collect()
+                        
                 except Exception as e:
                     logging.error(f"Error at {timestamp}: {e}")
+                    
+                del frame, rgb_frame
+                if draw_frame is not None:
+                    del draw_frame
 
             f_idx += 1
 
@@ -170,18 +219,21 @@ def process_video(uploaded_file, engine) -> dict:
         timeline.sort(key=lambda x: float(str(x['time']).replace('s', '')))
         
         cap.release()
+        face_detection.close()
 
         # ── 3. Aggregation ────────────────────────────────────────────────────
-        if emotion_results:
-            counts = Counter(emotion_results)
-            majority = counts.most_common(1)[0][0]
-            dist = {k: round(v / len(emotion_results), 2) for k, v in counts.items()}
+        total_score = sum(emotion_scores.values())
+        if total_score > 0:
+            majority = max(emotion_scores, key=emotion_scores.get)
+            dist = {k: round(v / total_score, 2) for k, v in emotion_scores.items()}
             
-            result["face_emotion"] = majority
-            result["face_confidence"] = counts[majority] / len(emotion_results)
-            result["emotion_distribution"] = dist
+            result["face_emotion"] = EMOTION_LABEL_MAP.get(majority, majority.capitalize())
+            result["face_confidence"] = emotion_scores[majority] / total_score
+            
+            # Use mapped labels for UI
+            result["emotion_distribution"] = {EMOTION_LABEL_MAP.get(k, k.capitalize()): v for k, v in dist.items() if v > 0}
             result["emotion_timeline"] = timeline
-            result["face_preview_frames"] = preview_frames
+            result["face_preview_frames"] = preview_frames[:20]
             result["faces_detected"] = total_faces
             result["frames_analyzed"] = analyzed_count
         else:
@@ -196,6 +248,7 @@ def process_video(uploaded_file, engine) -> dict:
         if video_tmp and os.path.exists(video_tmp):
             try: os.unlink(video_tmp)
             except: pass
+        gc.collect()
 
     result["processing_time"] = f"{round(time.time() - start_time, 2)} sec"
     return result

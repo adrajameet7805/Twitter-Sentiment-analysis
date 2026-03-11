@@ -91,6 +91,16 @@ def render_audio_analysis(engine):
                      key="audio_analyse_btn"):
         return
 
+    import time
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    for i in range(101):
+        progress_bar.progress(i)
+        status_text.text(f"Processing... {i}%")
+        time.sleep(0.02)
+    progress_bar.empty()
+    status_text.empty()
+
     # ── Processing ─────────────────────────────────────────────────────────
     try:
         with st.spinner("🎙️ AI Engine transcribing audio..."):

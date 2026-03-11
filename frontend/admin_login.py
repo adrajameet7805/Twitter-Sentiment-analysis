@@ -236,8 +236,8 @@ def show_login_page():
         <div class="login-wrapper">
             <div class="login-card">
                 <div class="brand-icon">🧠</div>
-                <div class="brand-title">Sentiment Analysis</div>
-                <div class="brand-subtitle">Enterprise Edition</div>
+                <div class="brand-title">Twitter Sentiment Analysis</div>
+                <div class="brand-subtitle">AI Emotion Detection Dashboard</div>
 
                 <div class="welcome-text">Welcome back</div>
                 <div class="welcome-sub">Sign in to your admin account</div>

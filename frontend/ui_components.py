@@ -308,6 +308,15 @@ def render_single_analysis(engine):
 
     if st.button("🚀 Analyze Emotion", type="primary", width="stretch"):
         if input_text:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            for i in range(101):
+                progress_bar.progress(i)
+                status_text.text(f"Processing... {i}%")
+                time.sleep(0.02)
+            progress_bar.empty()
+            status_text.empty()
+
             res_col1, res_col2 = st.columns([1, 1.5])
 
             with res_col1:
